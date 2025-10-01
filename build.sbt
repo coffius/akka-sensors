@@ -2,11 +2,12 @@ import Dependencies._
 import Keys._
 import sbt.file
 
-lazy val scala2 = "2.13.14"
+val scala2 = "2.13.16"
 ThisBuild / versionScheme := Some("early-semver")
+ThisBuild / libraryDependencySchemes += "org.http4s" % "*" % VersionScheme.Always
 
 val commonSettings = Defaults.coreDefaultSettings ++ Seq(
-        organization := "nl.pragmasoft.sensors",
+        organization := "nl.pragmasoft",
         scalaVersion := scala2,
         testOptions += Tests.Argument(TestFrameworks.JUnit, "-v"),
         Test / parallelExecution := false,
@@ -23,8 +24,7 @@ val commonSettings = Defaults.coreDefaultSettings ++ Seq(
               "utf8",
               "-Xfatal-warnings"
             ),
-        Compile / packageBin / packageOptions
-          +=
+        Compile / packageBin / packageOptions +=
             Package.ManifestAttributes(
               "Build-Time"   -> new java.util.Date().toString,
               "Build-Commit" -> git.gitHeadCommit.value.getOrElse("No Git Revision Found")
@@ -41,42 +41,17 @@ lazy val noPublishSettings = Seq(
   publishArtifact := false
 )
 
-lazy val `sensors-core` = project
-  .in(file("sensors-core"))
+lazy val `akka-sensors` = project
+  .in(file("akka-sensors"))
   .settings(commonSettings)
   .settings(
-    moduleName := "sensors-core",
+    moduleName := "akka-sensors",
     libraryDependencies ++= Akka.deps ++ Prometheus.deps ++ Logging.deps ++ TestTools.deps,
     dependencyOverrides ++= Akka.deps
   )
 
-lazy val `sensors-cassandra` = project
-  .in(file("sensors-cassandra"))
-  .settings(commonSettings)
-  .settings(
-    moduleName := "sensors-cassandra",
-    libraryDependencies ++= Akka.deps ++ Prometheus.deps ++
-            (Cassandra.deps :+ Cassandra.cassandraUnit % Test) ++ Logging.deps ++ TestTools.deps,
-    dependencyOverrides ++= Akka.deps
-  )
-  .dependsOn(`sensors-core`)
-
-lazy val `app` = project
-  .in(file("examples/app"))
-  .enablePlugins(JavaAppPackaging, DockerPlugin)
-  .settings(commonSettings ++ noPublishSettings)
-  .settings(
-    moduleName := "app",
-    Compile / mainClass := Some("nl.pragmasoft.app.Main"),
-    Docker / version := Keys.version.value,
-    dockerUpdateLatest := true,
-    libraryDependencies ++= App.deps :+ Cassandra.cassandraUnit,
-    dependencyOverrides ++= Akka.deps
-  )
-  .dependsOn(`sensors-core`, `sensors-cassandra`)
-
 lazy val `root` = project
   .in(file("."))
-  .aggregate(app, `sensors-core`, `sensors-cassandra`)
+  .aggregate(`akka-sensors`)
   .settings(commonSettings ++ noPublishSettings)
   .settings(name := "Akka Sensors")
